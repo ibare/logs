@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rule System Analysis — AI 코딩 에이전트의 규칙 준수 행동 분석</title>
+<meta name="description" content="7개 프로젝트, 14,988 이벤트, 61개 규칙 파일에서 추출한 AI 코딩 에이전트의 규칙 준수 행동 분석. 규칙 복잡도와 위반율의 관계, 에이전트의 체계적 약점을 데이터로 추적한다.">
+<meta name="author" content="ibare">
+
+<!-- Open Graph -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="Rule System Analysis — AI 코딩 에이전트의 규칙 준수 행동 분석">
+<meta property="og:description" content="7개 프로젝트, 14,988 이벤트, 61개 규칙 파일에서 추출한 AI 코딩 에이전트의 규칙 준수 행동 분석">
+<meta property="og:image" content="https://ibare.github.io/logs/rule-system-analysis/rule-system-analysis-og-cover.png">
+<meta property="og:url" content="https://ibare.github.io/logs/rule-system-analysis/">
+<meta property="og:site_name" content="Baden">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:locale:alternate" content="en_US">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Rule System Analysis — AI 코딩 에이전트의 규칙 준수 행동 분석">
+<meta name="twitter:description" content="7개 프로젝트, 14,988 이벤트, 61개 규칙 파일에서 추출한 AI 코딩 에이전트의 규칙 준수 행동 분석">
+<meta name="twitter:image" content="https://ibare.github.io/logs/rule-system-analysis/rule-system-analysis-og-cover.png">
+
+<script defer src="https://cloud.umami.is/script.js" data-website-id="9a567c13-945f-4f10-b5fd-0fce4c05ab21"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ── Dark theme (default) ── */
+  :root, [data-theme="dark"] {
+    --bg: #0a0a0f;
+    --bg-card: #12121a;
+    --bg-card-hover: #1a1a25;
+    --bg-subtle: rgba(255,255,255,0.03);
+    --border: #1e1e2e;
+    --border-accent: #2a2a3e;
+    --text: #e4e4ef;
+    --text-dim: #8888a0;
+    --text-muted: #55556a;
+    --ring-bg: rgba(255,255,255,0.05);
+    --gridline: rgba(255,255,255,0.04);
+    --shadow-tooltip: rgba(0,0,0,0.5);
+    --hero-glow: rgba(108,140,255,0.08);
+    --insight-bg: linear-gradient(135deg, rgba(108,140,255,0.06), rgba(160,120,255,0.06));
+    --insight-border: rgba(108,140,255,0.15);
+    --insight-rose-bg: linear-gradient(135deg, rgba(240,96,136,0.06), rgba(240,176,96,0.06));
+    --insight-rose-border: rgba(240,96,136,0.15);
+    --row-hover: rgba(255,255,255,0.02);
+    --badge-alpha: 0.12;
+    --dot-shadow: rgba(0,0,0,0.3);
+  }
+
+  /* ── Light theme ── */
+  [data-theme="light"] {
+    --bg: #f5f5f8;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f0f0f5;
+    --bg-subtle: rgba(0,0,0,0.03);
+    --border: #e0e0e8;
+    --border-accent: #d0d0da;
+    --text: #1a1a2e;
+    --text-dim: #555570;
+    --text-muted: #8888a0;
+    --ring-bg: rgba(0,0,0,0.06);
+    --gridline: rgba(0,0,0,0.06);
+    --shadow-tooltip: rgba(0,0,0,0.12);
+    --hero-glow: rgba(108,140,255,0.06);
+    --insight-bg: linear-gradient(135deg, rgba(108,140,255,0.08), rgba(160,120,255,0.05));
+    --insight-border: rgba(108,140,255,0.2);
+    --insight-rose-bg: linear-gradient(135deg, rgba(240,96,136,0.07), rgba(240,176,96,0.05));
+    --insight-rose-border: rgba(240,96,136,0.2);
+    --row-hover: rgba(0,0,0,0.02);
+    --badge-alpha: 0.1;
+    --dot-shadow: rgba(0,0,0,0.15);
+  }
+
+  /* ── Accent colors (shared) ── */
+  :root {
+    --accent-blue: #6c8cff; --accent-purple: #a078ff; --accent-teal: #5ce0d8;
+    --accent-amber: #f0b060; --accent-rose: #f06088; --accent-green: #60d090;
+    --gradient-1: linear-gradient(135deg, #6c8cff, #a078ff);
+    --gradient-2: linear-gradient(135deg, #5ce0d8, #6c8cff);
+    --gradient-3: linear-gradient(135deg, #f0b060, #f06088);
+    --c-fullstack: #6c8cff; --c-compiler: #5ce0d8; --c-renderer-gl: #60d090;
+    --c-renderer-svg: #a078ff; --c-math: #f0b060; --c-realtime: #f06088;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; transition: background 0.3s, color 0.3s; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── Article Link ── */
+  .article-link { position: fixed; top: 16px; left: 16px; z-index: 1000; display: flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--text-dim); text-decoration: none; transition: all 0.2s; font-family: inherit; }
+  .article-link:hover { border-color: var(--border-accent); color: var(--text); }
+  .article-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* ── Top Controls ── */
+  .top-controls { position: fixed; top: 16px; right: 16px; z-index: 1000; display: flex; gap: 8px; }
+  .ctrl-group { display: flex; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .ctrl-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text-muted); transition: all 0.2s; font-family: inherit; }
+  .ctrl-btn.active { background: rgba(108,140,255,0.15); color: var(--accent-blue); }
+  .ctrl-btn:hover:not(.active) { color: var(--text-dim); }
+  .ctrl-btn svg { width: 14px; height: 14px; vertical-align: -2px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* ── Sticky Legend ── */
+  .sticky-legend { position: fixed; top: 56px; right: 16px; z-index: 999; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; width: 200px; font-size: 11px; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: all 0.3s; }
+  .sticky-legend.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .sticky-legend h4 { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .legend-entry { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .legend-entry .le-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-entry .le-name { font-weight: 600; color: var(--text); flex-shrink: 0; }
+  .legend-entry .le-desc { color: var(--text-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── Hero ── */
+  .hero { text-align: center; padding: 60px 0 48px; position: relative; }
+  .hero::before { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 600px; height: 400px; background: radial-gradient(ellipse, var(--hero-glow) 0%, transparent 70%); pointer-events: none; }
+  .hero h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px; }
+  .hero p { font-size: 16px; color: var(--text-dim); max-width: 800px; margin: 0 auto; }
+
+  /* ── Stats ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
+  .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; transition: border-color 0.2s; }
+  .stat-card:hover { border-color: var(--border-accent); }
+  .stat-value { font-size: 36px; font-weight: 700; font-family: 'JetBrains Mono', monospace; background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 48px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .section-number { font-size: 12px; font-weight: 700; color: var(--accent-blue); font-family: 'JetBrains Mono', monospace; background: rgba(108,140,255,0.1); padding: 4px 10px; border-radius: 6px; }
+  .section-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .section-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 20px; }
+
+  /* ── Cards ── */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all 0.2s; }
+  .card:hover { border-color: var(--border-accent); transform: translateY(-1px); }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card-title .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .full-width { grid-column: 1 / -1; }
+
+  /* ── Project Badge ── */
+  .pbadge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; vertical-align: middle; }
+  .pbadge .pb-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .pb-fullstack { background: rgba(108,140,255,var(--badge-alpha)); color: var(--c-fullstack); } .pb-fullstack .pb-dot { background: var(--c-fullstack); }
+  .pb-compiler { background: rgba(92,224,216,var(--badge-alpha)); color: var(--c-compiler); } .pb-compiler .pb-dot { background: var(--c-compiler); }
+  .pb-renderer-gl { background: rgba(96,208,144,var(--badge-alpha)); color: var(--c-renderer-gl); } .pb-renderer-gl .pb-dot { background: var(--c-renderer-gl); }
+  .pb-renderer-svg { background: rgba(160,120,255,var(--badge-alpha)); color: var(--c-renderer-svg); } .pb-renderer-svg .pb-dot { background: var(--c-renderer-svg); }
+  .pb-math { background: rgba(240,176,96,var(--badge-alpha)); color: var(--c-math); } .pb-math .pb-dot { background: var(--c-math); }
+  .pb-realtime { background: rgba(240,96,136,var(--badge-alpha)); color: var(--c-realtime); } .pb-realtime .pb-dot { background: var(--c-realtime); }
+
+  /* ── Bar / Stacked ── */
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 120px 1fr 60px; align-items: center; gap: 12px; position: relative; }
+  .bar-label { font-size: 13px; font-weight: 500; color: var(--text-dim); text-align: right; }
+  .bar-track { height: 28px; background: var(--bg-subtle); border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease-out; }
+  .bar-fill.blue { background: var(--gradient-1); } .bar-fill.teal { background: var(--gradient-2); } .bar-fill.amber { background: var(--gradient-3); }
+  .bar-fill.green { background: linear-gradient(135deg, #60d090, #5ce0d8); } .bar-fill.purple { background: linear-gradient(135deg, #a078ff, #6c8cff); } .bar-fill.rose { background: linear-gradient(135deg, #f06088, #f0b060); }
+  .bar-value { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text); text-align: right; }
+
+  .stacked-chart { display: flex; flex-direction: column; gap: 14px; }
+  .stacked-row { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: center; }
+  .stacked-label { font-size: 13px; font-weight: 500; color: var(--text-dim); text-align: right; }
+  .stacked-track { height: 32px; display: flex; border-radius: 6px; overflow: hidden; background: var(--bg-subtle); }
+  .stacked-seg { height: 100%; transition: width 1s ease-out; min-width: 2px; cursor: pointer; }
+  .stacked-seg.explore { background: var(--accent-teal); } .stacked-seg.plan { background: var(--accent-blue); }
+  .stacked-seg.impl { background: var(--accent-purple); } .stacked-seg.comply { background: var(--accent-amber); }
+  .stacked-seg:hover { filter: brightness(1.3); }
+
+  .legend { display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* ── Tooltip ── */
+  .tooltip { position: fixed; z-index: 2000; background: var(--bg-card); border: 1px solid var(--border-accent); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text); pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 260px; box-shadow: 0 8px 24px var(--shadow-tooltip); line-height: 1.5; }
+  .tooltip.show { opacity: 1; }
+  .tooltip .tt-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .tooltip .tt-val { font-family: 'JetBrains Mono', monospace; color: var(--accent-blue); font-weight: 600; }
+  .tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+  .tooltip .tt-label { color: var(--text-dim); }
+
+  /* ── Table ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table thead th { text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .data-table tbody td { padding: 10px 12px; border-bottom: 1px solid var(--bg-subtle); color: var(--text-dim); }
+  .data-table tbody tr:hover td { background: var(--row-hover); }
+  .data-table .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* ── Donut ── */
+  .donut-container { display: flex; align-items: center; gap: 24px; }
+  .donut-chart { width: 160px; height: 160px; position: relative; }
+  .donut-chart svg { transform: rotate(-90deg); }
+  .donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .donut-center .big { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .donut-center .small { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; }
+  .donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); cursor: pointer; padding: 4px 6px; border-radius: 4px; transition: background 0.15s; }
+  .donut-legend-item:hover { background: var(--row-hover); }
+  .donut-legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ── Fingerprint ── */
+  .fingerprint-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .fingerprint-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; transition: all 0.25s; }
+  .fingerprint-card:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+  .fingerprint-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .fingerprint-card .fp-subtitle { font-size: 10px; color: var(--text-muted); margin-bottom: 12px; }
+  .fp-ring { width: 120px; height: 120px; margin: 0 auto 12px; position: relative; }
+  .fp-ring svg { transform: rotate(-90deg); }
+  .fp-ring .fp-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.3; }
+  .fp-ring .fp-center .fp-big { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); display: block; }
+  .fp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; color: var(--text-dim); }
+  .fp-stat-val { font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+
+  /* ── Scatter ── */
+  .scatter-container { position: relative; width: 100%; height: 320px; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border); }
+  .scatter-dot { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; box-shadow: 0 0 0 2px var(--dot-shadow); }
+  .scatter-dot:hover { transform: translate(-50%, -50%) scale(1.6); z-index: 10; box-shadow: 0 0 12px rgba(255,255,255,0.2); }
+  .scatter-axis-x, .scatter-axis-y { position: absolute; font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .scatter-label { position: absolute; font-size: 10px; color: var(--text-dim); text-align: center; white-space: nowrap; pointer-events: none; }
+
+  /* ── Insight / Callout ── */
+  .insight-box { background: var(--insight-bg); border: 1px solid var(--insight-border); border-radius: 12px; padding: 24px; margin-top: 16px; }
+  .insight-box h4 { font-size: 13px; font-weight: 600; color: var(--accent-blue); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .insight-box p { font-size: 14px; color: var(--text-dim); line-height: 1.7; }
+  .insight-box ul { list-style: none; padding: 0; margin-top: 8px; }
+  .insight-box li { font-size: 14px; color: var(--text-dim); padding: 4px 0 4px 16px; position: relative; }
+  .insight-box li::before { content: '\2192'; position: absolute; left: 0; color: var(--accent-blue); }
+  .callout { display: flex; gap: 16px; align-items: flex-start; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent-amber); border-radius: 0 12px 12px 0; padding: 20px 24px; margin: 16px 0; }
+  .callout-icon { font-size: 24px; flex-shrink: 0; }
+  .callout-text { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+  .callout-text strong { color: var(--text); }
+
+  /* ── Tags ── */
+  .tag { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 4px; margin: 2px; }
+  .tag-blue { background: rgba(108,140,255,0.15); color: var(--accent-blue); }
+  .tag-purple { background: rgba(160,120,255,0.15); color: var(--accent-purple); }
+  .tag-teal { background: rgba(92,224,216,0.15); color: var(--accent-teal); }
+  .tag-amber { background: rgba(240,176,96,0.15); color: var(--accent-amber); }
+  .tag-rose { background: rgba(240,96,136,0.15); color: var(--accent-rose); }
+  .tag-green { background: rgba(96,208,144,0.15); color: var(--accent-green); }
+
+  /* ── Pipeline Diagram ── */
+  .pipeline { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; margin: 24px 0; }
+  .pipe-step { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; min-width: 120px; text-align: center; transition: all 0.2s; position: relative; }
+  .pipe-step:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+  .pipe-step .pipe-icon { font-size: 24px; }
+  .pipe-step .pipe-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .pipe-step .pipe-sub { font-size: 10px; color: var(--text-muted); max-width: 100px; }
+  .pipe-step.active { border-color: var(--accent-blue); box-shadow: 0 0 12px rgba(108,140,255,0.15); }
+  .pipe-step.rule { border-color: var(--accent-amber); }
+  .pipe-arrow { font-size: 18px; color: var(--text-muted); padding: 0 6px; flex-shrink: 0; }
+
+  /* ── Animation ── */
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .animate { animation: fadeInUp 0.6s ease-out both; }
+  .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; }
+
+  .footer { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 40px; }
+
+  /* ── Tablet ── */
+  @media (max-width: 900px) {
+    .container { padding: 32px 16px 60px; }
+    .hero { padding: 40px 0 32px; }
+    .hero h1 { font-size: 32px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .fingerprint-grid { grid-template-columns: repeat(2, 1fr); }
+    .sticky-legend { display: none; }
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    .container { padding: 24px 12px 48px; }
+
+    /* Article link & Top controls */
+    .article-link { top: 8px; left: 8px; padding: 5px 8px; font-size: 11px; }
+    .article-link span { display: none; }
+    .top-controls { top: 8px; right: 8px; gap: 4px; }
+    .ctrl-btn { padding: 5px 8px; font-size: 11px; }
+
+    /* Hero */
+    .hero { padding: 48px 0 24px; }
+    .hero::before { width: 300px; height: 200px; }
+    .hero h1 { font-size: 24px; }
+    .hero p { font-size: 13px; }
+
+    /* Stats */
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 32px; }
+    .stat-card { padding: 16px 12px; }
+    .stat-value { font-size: 24px; }
+    .stat-label { font-size: 10px; }
+
+    /* Section */
+    .section { margin-bottom: 32px; }
+    .section-header { flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .section-title { font-size: 16px; }
+    .section-desc { font-size: 13px; }
+
+    /* Cards */
+    .cards-grid { grid-template-columns: 1fr; gap: 12px; }
+    .card { padding: 16px; }
+    .card-title { font-size: 13px; }
+
+    /* Bar charts */
+    .bar-row { grid-template-columns: 80px 1fr 44px; gap: 8px; }
+    .bar-label { font-size: 11px; }
+    .bar-track { height: 22px; }
+    .bar-value { font-size: 11px; }
+    .pbadge { font-size: 10px; padding: 1px 5px; }
+
+    /* Stacked charts */
+    .stacked-row { grid-template-columns: 80px 1fr; gap: 8px; }
+    .stacked-label { font-size: 11px; }
+    .stacked-track { height: 26px; }
+    .legend { gap: 12px; }
+    .legend-item { font-size: 11px; }
+
+    /* Pipeline */
+    .pipeline { flex-direction: column; gap: 0; align-items: stretch; }
+    .pipe-step { min-width: unset; flex-direction: row; padding: 12px 16px; gap: 12px; border-radius: 8px; text-align: left; }
+    .pipe-step .pipe-icon { font-size: 18px; flex-shrink: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--bg-subtle); border-radius: 50%; }
+    .pipe-step .pipe-label { font-size: 13px; }
+    .pipe-step .pipe-sub { max-width: none; font-size: 11px; }
+    .pipe-arrow { transform: rotate(90deg); font-size: 14px; padding: 2px 0; text-align: center; }
+
+    /* Donut */
+    .donut-container { flex-direction: column; align-items: center; gap: 16px; }
+    .donut-legend { width: 100%; }
+
+    /* Fingerprint */
+    .fingerprint-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .fingerprint-card { padding: 14px; }
+    .fingerprint-card h4 { font-size: 12px; }
+    .fp-ring { width: 100px; height: 100px; margin-bottom: 8px; }
+    .fp-ring svg { width: 100px; height: 100px; }
+    .fp-ring .fp-center .fp-big { font-size: 16px; }
+    .fp-stats { font-size: 10px; gap: 4px; }
+
+    /* Scatter */
+    .scatter-container { height: 260px; }
+    .scatter-dot { font-size: 8px !important; }
+    .scatter-label { font-size: 8px; }
+    .scatter-axis-x, .scatter-axis-y { font-size: 8px; }
+
+    /* Table */
+    .data-table { font-size: 11px; }
+    .data-table thead th { padding: 8px 6px; font-size: 9px; }
+    .data-table tbody td { padding: 8px 6px; }
+
+    /* Insight & Callout */
+    .insight-box { padding: 16px; }
+    .insight-box h4 { font-size: 12px; }
+    .insight-box p, .insight-box li { font-size: 13px; }
+    .callout { flex-direction: column; gap: 8px; padding: 14px 16px; }
+    .callout-icon { font-size: 20px; }
+    .callout-text { font-size: 13px; }
+
+    /* Section 01 category grid (inline styles override) */
+    .section [style*="grid-template-columns: 120px repeat(3"] { grid-template-columns: 80px repeat(3, 1fr) !important; gap: 4px !important; }
+
+    /* Section 07 domain rules - stack tags */
+    .section [style*="justify-content:space-between"] { flex-wrap: wrap; gap: 6px; }
+
+    /* Section 09 conclusion cards */
+    .section [style*="minmax(280px"] { grid-template-columns: 1fr !important; }
+
+    /* Footer */
+    .footer { font-size: 11px; padding: 24px 0; }
+  }
+
+  /* ── Very small screens ── */
+  @media (max-width: 380px) {
+    .hero h1 { font-size: 20px; }
+    .stat-value { font-size: 20px; }
+    .stats-row { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .bar-row { grid-template-columns: 64px 1fr 40px; }
+    .stacked-row { grid-template-columns: 64px 1fr; }
+    .fingerprint-grid { grid-template-columns: 1fr; }
+    .scatter-container { height: 220px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ═══ Article Link ═══ -->
+<a class="article-link" id="articleLink" href="https://medium.com/@ibare/%EC%8B%9C%EB%8B%88%EC%96%B4-%EA%B0%9C%EB%B0%9C%EC%9E%90%EA%B0%80-ai%EC%99%80-6%EA%B0%9C%EC%9B%94%EA%B0%84-25%EB%A7%8C-%EB%9D%BC%EC%9D%B8%EC%9D%98-%EC%8B%9C%EC%8A%A4%ED%85%9C%EC%9D%84-%EB%A7%8C%EB%93%A4%EB%A9%B0-%EB%B0%9C%EA%B2%AC%ED%95%9C-%EA%B2%83%EB%93%A4-e3935857f35c" target="_blank" rel="noopener">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h7V2H2v9h2V4z"/><path d="M13 11l9-9"/><path d="M15 2h7v7"/><path d="M10 14H4v6h16v-6h-6"/></svg>
+  <span data-i18n="article_link">관련 글 읽기</span>
+</a>
+
+<!-- ═══ Top Controls: Lang + Theme ═══ -->
+<div class="top-controls">
+  <div class="ctrl-group">
+    <button class="ctrl-btn active" data-lang="ko" onclick="setLang('ko')">KO</button>
+    <button class="ctrl-btn" data-lang="en" onclick="setLang('en')">EN</button>
+  </div>
+  <div class="ctrl-group">
+    <button class="ctrl-btn" data-theme-btn="dark" onclick="setTheme('dark')">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+    </button>
+    <button class="ctrl-btn active" data-theme-btn="light" onclick="setTheme('light')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══ Sticky Legend ═══ -->
+<div class="sticky-legend" id="stickyLegend">
+  <h4 data-i18n="legend_title">프로젝트 범례</h4>
+  <div class="legend-entry"><div class="le-dot" style="background:var(--c-fullstack)"></div><span class="le-name">Full-stack</span><span class="le-desc" data-i18n="legend_fullstack">26규칙 · 408항목</span></div>
+  <div class="legend-entry"><div class="le-dot" style="background:var(--c-compiler)"></div><span class="le-name">Compiler</span><span class="le-desc" data-i18n="legend_compiler">11규칙 · 111항목</span></div>
+  <div class="legend-entry"><div class="le-dot" style="background:var(--c-renderer-gl)"></div><span class="le-name">Renderer-GL</span><span class="le-desc" data-i18n="legend_rgl">9규칙 · 70항목</span></div>
+  <div class="legend-entry"><div class="le-dot" style="background:var(--c-renderer-svg)"></div><span class="le-name">Renderer-SVG</span><span class="le-desc" data-i18n="legend_rsvg">8규칙 · 65항목</span></div>
+  <div class="legend-entry"><div class="le-dot" style="background:var(--c-math)"></div><span class="le-name">Math Engine</span><span class="le-desc" data-i18n="legend_math">7규칙 · 47항목</span></div>
+  <div class="legend-entry"><div class="le-dot" style="background:var(--c-realtime)"></div><span class="le-name">Realtime</span><span class="le-desc" data-i18n="legend_rt">7규칙 · ~28항목</span></div>
+</div>
+
+<div class="container">
+
+  <!-- ═══ HERO ═══ -->
+  <div class="hero animate">
+    <h1>Rule System Analysis</h1>
+    <p data-i18n="hero_desc">7개 프로젝트, 14,988 이벤트, 61개 규칙 파일에서 추출한 AI 코딩 에이전트의 규칙 준수 행동 분석</p>
+  </div>
+
+  <!-- ═══ STATS ═══ -->
+  <div class="stats-row animate delay-1">
+    <div class="stat-card"><div class="stat-value">14,988</div><div class="stat-label" data-i18n="stat_events">전체 이벤트</div></div>
+    <div class="stat-card"><div class="stat-value">61</div><div class="stat-label" data-i18n="stat_rules">규칙 파일</div></div>
+    <div class="stat-card"><div class="stat-value">701</div><div class="stat-label" data-i18n="stat_items">규칙 항목 (MUST/PREFER)</div></div>
+    <div class="stat-card"><div class="stat-value">149</div><div class="stat-label" data-i18n="stat_viols">위반 감지</div></div>
+  </div>
+
+  <!-- ═══ SECTION 00: Pipeline ═══ -->
+  <div class="section animate delay-2">
+    <div class="section-header">
+      <span class="section-number">00</span>
+      <h2 class="section-title" data-i18n="s00_title">작업 파이프라인: 규칙 기반 AI 코딩은 이렇게 작동한다</h2>
+    </div>
+    <p class="section-desc" data-i18n="s00_desc">모든 코드 작업은 다음 파이프라인을 따른다. Rule Agent가 작업 전후에 개입하여 규칙 위반을 사전에 차단하고, 사후에 검증한다.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step active">
+        <div class="pipe-icon">1</div>
+        <div class="pipe-label" data-i18n="pipe_plan">계획 수립</div>
+        <div class="pipe-sub" data-i18n="pipe_plan_sub">작업 분석 및 접근 방식 결정</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step rule">
+        <div class="pipe-icon">2</div>
+        <div class="pipe-label" data-i18n="pipe_pre">사전 규칙 검토</div>
+        <div class="pipe-sub" data-i18n="pipe_pre_sub">Rule Agent가 관련 규칙 로드 및 위반 가능성 보고</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="pipe-icon">3</div>
+        <div class="pipe-label" data-i18n="pipe_pass1">Pass</div>
+        <div class="pipe-sub" data-i18n="pipe_pass1_sub">위반 없음 확인 시 진행 허가</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step active">
+        <div class="pipe-icon">4</div>
+        <div class="pipe-label" data-i18n="pipe_impl">코드 구현</div>
+        <div class="pipe-sub" data-i18n="pipe_impl_sub">실제 코드 작성 및 수정</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step rule">
+        <div class="pipe-icon">5</div>
+        <div class="pipe-label" data-i18n="pipe_post">사후 규칙 검증</div>
+        <div class="pipe-sub" data-i18n="pipe_post_sub">Rule Agent가 변경 결과를 규칙 대비 검증</div>
+      </div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-step">
+        <div class="pipe-icon">6</div>
+        <div class="pipe-label" data-i18n="pipe_done">Pass &amp; 완료</div>
+        <div class="pipe-sub" data-i18n="pipe_done_sub">검증 통과 시 작업 완료 처리</div>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <h4 data-i18n="s00_insight_title">이 리포트가 다루는 것</h4>
+      <p data-i18n="s00_insight_body">위 파이프라인에서 발생하는 모든 이벤트(계획, 탐색, 구현, 규칙 참조, 위반 감지, 완료)가 Baden에 수집된다. 이 리포트는 7개 프로젝트에서 수집된 <strong>14,988건의 이벤트</strong>를 분석하여, 규칙 시스템이 AI 에이전트의 행동에 어떤 영향을 미치는지 추적한다.</p>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 01: Rule Volume ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-number">01</span>
+      <h2 class="section-title" data-i18n="s01_title">규칙 볼륨: 프로젝트별 규칙 규모</h2>
+    </div>
+    <p class="section-desc" data-i18n="s01_desc">프로젝트 성숙도와 도메인 복잡도에 따라 규칙 시스템의 크기가 극적으로 차이난다.</p>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-blue)"></span><span data-i18n="s01_chart1">규칙 아이템 수 (MUST / MUST NOT / PREFER)</span></div>
+        <div class="bar-chart">
+          <div class="bar-row" data-tt-title="Full-stack" data-tt-detail="26 rules, 16 specifics, 9 concerns, 1 always"><div class="bar-label"><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></div><div class="bar-track"><div class="bar-fill blue" style="width:100%"></div></div><div class="bar-value">408</div></div>
+          <div class="bar-row" data-tt-title="Compiler" data-tt-detail="11 rules, 5 specifics, 5 concerns, 1 always"><div class="bar-label"><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></div><div class="bar-track"><div class="bar-fill teal" style="width:27.2%"></div></div><div class="bar-value">111</div></div>
+          <div class="bar-row" data-tt-title="Renderer-GL" data-tt-detail="9 rules, 3 specifics, 5 concerns, 1 always"><div class="bar-label"><span class="pbadge pb-renderer-gl"><span class="pb-dot"></span>Renderer-GL</span></div><div class="bar-track"><div class="bar-fill green" style="width:17.2%"></div></div><div class="bar-value">70</div></div>
+          <div class="bar-row" data-tt-title="Renderer-SVG" data-tt-detail="8 rules, 2 specifics, 5 concerns, 1 always"><div class="bar-label"><span class="pbadge pb-renderer-svg"><span class="pb-dot"></span>Renderer-SVG</span></div><div class="bar-track"><div class="bar-fill purple" style="width:15.9%"></div></div><div class="bar-value">65</div></div>
+          <div class="bar-row" data-tt-title="Math Engine" data-tt-detail="7 rules, 0 specifics, 6 concerns, 1 always"><div class="bar-label"><span class="pbadge pb-math"><span class="pb-dot"></span>Math Engine</span></div><div class="bar-track"><div class="bar-fill amber" style="width:11.5%"></div></div><div class="bar-value">47</div></div>
+          <div class="bar-row" data-tt-title="Realtime" data-tt-detail="7 rules, 2 specifics, 4 concerns, 1 always"><div class="bar-label"><span class="pbadge pb-realtime"><span class="pb-dot"></span>Realtime</span></div><div class="bar-track"><div class="bar-fill rose" style="width:7%"></div></div><div class="bar-value">~28</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-purple)"></span><span data-i18n="s01_chart2">규칙 구성 (카테고리별 파일 수)</span></div>
+        <div class="bar-chart" style="gap:14px">
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px"><div></div><div>Always</div><div>Concerns</div><div>Specifics</div></div>
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;align-items:center"><div class="bar-label"><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-teal)">1</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-blue)">9</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-purple)">16</div></div>
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;align-items:center"><div class="bar-label"><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-teal)">1</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-blue)">5</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-purple)">5</div></div>
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;align-items:center"><div class="bar-label"><span class="pbadge pb-renderer-gl"><span class="pb-dot"></span>Renderer-GL</span></div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-teal)">1</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-blue)">5</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-purple)">3</div></div>
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;align-items:center"><div class="bar-label"><span class="pbadge pb-renderer-svg"><span class="pb-dot"></span>Renderer-SVG</span></div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-teal)">1</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-blue)">5</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-purple)">2</div></div>
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;align-items:center"><div class="bar-label"><span class="pbadge pb-math"><span class="pb-dot"></span>Math Engine</span></div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-teal)">1</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-blue)">6</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-purple)">0</div></div>
+          <div style="display:grid;grid-template-columns:120px repeat(3,1fr);gap:8px;align-items:center"><div class="bar-label"><span class="pbadge pb-realtime"><span class="pb-dot"></span>Realtime</span></div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-teal)">1</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-blue)">4</div><div style="text-align:center;font-family:'JetBrains Mono';font-size:20px;font-weight:700;color:var(--accent-purple)">2</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box"><h4>Insight</h4><p data-i18n="s01_insight"><span class='pbadge pb-fullstack'><span class='pb-dot'></span>Full-stack</span>은 408개 규칙 아이템으로 나머지 5개 프로젝트 합산(321개)보다 27% 더 많다. 특히 <strong>Specifics 규칙이 16개</strong>로, 도메인별 세분화가 가장 깊은 프로젝트다. 반면 <span class='pbadge pb-math'><span class='pb-dot'></span>Math Engine</span>은 Specifics가 0개 — Concerns만으로 아키텍처 제약을 정의하는 '원칙 중심' 접근을 취하고 있다.</p></div>
+  </div>
+
+  <!-- ═══ SECTION 02: Behavioral DNA ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">02</span><h2 class="section-title" data-i18n="s02_title">행동 DNA: 에이전트의 작업 스타일 지문</h2></div>
+    <p class="section-desc" data-i18n="s02_desc">같은 에이전트라도 프로젝트 규칙 구성에 따라 완전히 다른 행동 패턴을 보인다.</p>
+    <div class="card full-width">
+      <div class="card-title"><span class="dot" style="background:var(--accent-teal)"></span><span data-i18n="s02_chart">프로젝트별 행동 카테고리 분포</span></div>
+      <div class="stacked-chart">
+        <div class="stacked-row"><div class="stacked-label"><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></div><div class="stacked-track"><div class="stacked-seg explore" style="width:12.9%" data-tt-cat-ko="탐색" data-tt-cat-en="Exploration" data-tt-pct="12.9%" data-tt-cnt="1,020"></div><div class="stacked-seg plan" style="width:26.4%" data-tt-cat-ko="계획" data-tt-cat-en="Planning" data-tt-pct="26.4%" data-tt-cnt="2,092"></div><div class="stacked-seg impl" style="width:9.7%" data-tt-cat-ko="구현" data-tt-cat-en="Implementation" data-tt-pct="9.7%" data-tt-cnt="770"></div><div class="stacked-seg comply" style="width:51.0%" data-tt-cat-ko="규칙 준수" data-tt-cat-en="Compliance" data-tt-pct="51.0%" data-tt-cnt="4,039"></div></div></div>
+        <div class="stacked-row"><div class="stacked-label"><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></div><div class="stacked-track"><div class="stacked-seg explore" style="width:16.8%" data-tt-cat-ko="탐색" data-tt-cat-en="Exploration" data-tt-pct="16.8%" data-tt-cnt="273"></div><div class="stacked-seg plan" style="width:28.5%" data-tt-cat-ko="계획" data-tt-cat-en="Planning" data-tt-pct="28.5%" data-tt-cnt="462"></div><div class="stacked-seg impl" style="width:17.4%" data-tt-cat-ko="구현" data-tt-cat-en="Implementation" data-tt-pct="17.4%" data-tt-cnt="283"></div><div class="stacked-seg comply" style="width:37.2%" data-tt-cat-ko="규칙 준수" data-tt-cat-en="Compliance" data-tt-pct="37.2%" data-tt-cnt="603"></div></div></div>
+        <div class="stacked-row"><div class="stacked-label"><span class="pbadge pb-renderer-gl"><span class="pb-dot"></span>Renderer-GL</span></div><div class="stacked-track"><div class="stacked-seg explore" style="width:17.8%" data-tt-cat-ko="탐색" data-tt-cat-en="Exploration" data-tt-pct="17.8%" data-tt-cnt="358"></div><div class="stacked-seg plan" style="width:51.0%" data-tt-cat-ko="계획" data-tt-cat-en="Planning" data-tt-pct="51.0%" data-tt-cnt="1,029"></div><div class="stacked-seg impl" style="width:21.5%" data-tt-cat-ko="구현" data-tt-cat-en="Implementation" data-tt-pct="21.5%" data-tt-cnt="433"></div><div class="stacked-seg comply" style="width:8.0%" data-tt-cat-ko="규칙 준수" data-tt-cat-en="Compliance" data-tt-pct="8.0%" data-tt-cnt="161"></div></div></div>
+        <div class="stacked-row"><div class="stacked-label"><span class="pbadge pb-renderer-svg"><span class="pb-dot"></span>Renderer-SVG</span></div><div class="stacked-track"><div class="stacked-seg explore" style="width:15.9%" data-tt-cat-ko="탐색" data-tt-cat-en="Exploration" data-tt-pct="15.9%" data-tt-cnt="283"></div><div class="stacked-seg plan" style="width:46.9%" data-tt-cat-ko="계획" data-tt-cat-en="Planning" data-tt-pct="46.9%" data-tt-cnt="836"></div><div class="stacked-seg impl" style="width:22.0%" data-tt-cat-ko="구현" data-tt-cat-en="Implementation" data-tt-pct="22.0%" data-tt-cnt="393"></div><div class="stacked-seg comply" style="width:13.2%" data-tt-cat-ko="규칙 준수" data-tt-cat-en="Compliance" data-tt-pct="13.2%" data-tt-cnt="236"></div></div></div>
+        <div class="stacked-row"><div class="stacked-label"><span class="pbadge pb-math"><span class="pb-dot"></span>Math Engine</span></div><div class="stacked-track"><div class="stacked-seg explore" style="width:22.3%" data-tt-cat-ko="탐색" data-tt-cat-en="Exploration" data-tt-pct="22.3%" data-tt-cnt="244"></div><div class="stacked-seg plan" style="width:41.2%" data-tt-cat-ko="계획" data-tt-cat-en="Planning" data-tt-pct="41.2%" data-tt-cnt="451"></div><div class="stacked-seg impl" style="width:24.4%" data-tt-cat-ko="구현" data-tt-cat-en="Implementation" data-tt-pct="24.4%" data-tt-cnt="266"></div><div class="stacked-seg comply" style="width:12.1%" data-tt-cat-ko="규칙 준수" data-tt-cat-en="Compliance" data-tt-pct="12.1%" data-tt-cnt="132"></div></div></div>
+        <div class="stacked-row"><div class="stacked-label"><span class="pbadge pb-realtime"><span class="pb-dot"></span>Realtime</span></div><div class="stacked-track"><div class="stacked-seg explore" style="width:11.2%" data-tt-cat-ko="탐색" data-tt-cat-en="Exploration" data-tt-pct="11.2%" data-tt-cnt="23"></div><div class="stacked-seg plan" style="width:43.7%" data-tt-cat-ko="계획" data-tt-cat-en="Planning" data-tt-pct="43.7%" data-tt-cnt="90"></div><div class="stacked-seg impl" style="width:29.1%" data-tt-cat-ko="구현" data-tt-cat-en="Implementation" data-tt-pct="29.1%" data-tt-cnt="60"></div><div class="stacked-seg comply" style="width:13.6%" data-tt-cat-ko="규칙 준수" data-tt-cat-en="Compliance" data-tt-pct="13.6%" data-tt-cnt="28"></div></div></div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-teal)"></div><span data-i18n="leg_explore">탐색 (Exploration)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-blue)"></div><span data-i18n="leg_plan">계획 (Planning)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-purple)"></div><span data-i18n="leg_impl">구현 (Implementation)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-amber)"></div><span data-i18n="leg_comply">규칙 준수 (Compliance)</span></div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:20px"><div class="callout-icon">&#9878;</div><div class="callout-text" data-i18n="s02_callout"><span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span>는 에이전트 시간의 <strong>51%를 규칙 확인에 사용</strong>한다. 111개 규칙 아이템이 코드 변경 1건당 평균 4.94회 규칙 참조를 유발한다. 반면 규칙 볼륨이 가장 큰 <span class='pbadge pb-fullstack'><span class='pb-dot'></span>Full-stack</span>은 37%에 그침 — 규칙의 <em>양</em>보다 <em>밀도와 도메인 위험도</em>가 에이전트 행동을 더 크게 좌우한다.</div></div>
+  </div>
+
+  <!-- ═══ SECTION 03: Fingerprints ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">03</span><h2 class="section-title" data-i18n="s03_title">프로젝트 지문: 6가지 핵심 지표</h2></div>
+    <p class="section-desc" data-i18n="s03_desc">각 프로젝트의 성격을 규칙 파일 수, 아이템 밀도, 코드 변경당 규칙 참조, 구현 비율, 위반율, 생성/수정 비율로 요약.</p>
+    <div class="fingerprint-grid">
+      <div class="fingerprint-card"><h4 style="color:var(--c-fullstack)">Full-stack</h4><div class="fp-subtitle" data-i18n="fp_fs_sub">26개 규칙 · 16 Specifics · 성숙한 풀스택</div><div class="fp-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ring-bg)" stroke-width="8"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--c-fullstack)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="0" stroke-linecap="round" opacity="0.3"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--ring-bg)" stroke-width="6"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--accent-purple)" stroke-width="6" stroke-dasharray="251" stroke-dashoffset="31" stroke-linecap="round" opacity="0.5"/></svg><div class="fp-center"><span class="fp-big">408</span><span>items</span></div></div><div class="fp-stats"><div><span data-i18n="fp_rules">규칙</span> <span class="fp-stat-val">26</span></div><div><span data-i18n="fp_density">밀도</span> <span class="fp-stat-val">15.7</span></div><div><span data-i18n="fp_viol">위반율</span> <span class="fp-stat-val">2.3%</span></div><div><span data-i18n="fp_create">생성비</span> <span class="fp-stat-val">8.5%</span></div></div></div>
+      <div class="fingerprint-card"><h4 style="color:var(--c-compiler)">Compiler</h4><div class="fp-subtitle" data-i18n="fp_cp_sub">11개 규칙 · 파이프라인 중심 · 최고 규칙 참조율</div><div class="fp-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ring-bg)" stroke-width="8"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--c-compiler)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="228" stroke-linecap="round" opacity="0.3"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--ring-bg)" stroke-width="6"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--accent-rose)" stroke-width="6" stroke-dasharray="251" stroke-dashoffset="201" stroke-linecap="round" opacity="0.5"/></svg><div class="fp-center"><span class="fp-big">111</span><span>items</span></div></div><div class="fp-stats"><div><span data-i18n="fp_rules">규칙</span> <span class="fp-stat-val">11</span></div><div><span data-i18n="fp_density">밀도</span> <span class="fp-stat-val">10.1</span></div><div><span data-i18n="fp_viol">위반율</span> <span class="fp-stat-val">3.8%</span></div><div><span data-i18n="fp_refchg">참조/변경</span> <span class="fp-stat-val">4.94</span></div></div></div>
+      <div class="fingerprint-card"><h4 style="color:var(--c-renderer-gl)">Renderer-GL</h4><div class="fp-subtitle" data-i18n="fp_rgl_sub">9개 규칙 · WebGL/SDF · 위반 0건</div><div class="fp-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ring-bg)" stroke-width="8"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--c-renderer-gl)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="244" stroke-linecap="round" opacity="0.3"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--ring-bg)" stroke-width="6"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--c-renderer-gl)" stroke-width="6" stroke-dasharray="251" stroke-dashoffset="209" stroke-linecap="round" opacity="0.5"/></svg><div class="fp-center"><span class="fp-big">70</span><span>items</span></div></div><div class="fp-stats"><div><span data-i18n="fp_rules">규칙</span> <span class="fp-stat-val">9</span></div><div><span data-i18n="fp_density">밀도</span> <span class="fp-stat-val">7.8</span></div><div><span data-i18n="fp_viol2">위반</span> <span class="fp-stat-val">0</span></div><div><span data-i18n="fp_plan">계획비</span> <span class="fp-stat-val">51%</span></div></div></div>
+      <div class="fingerprint-card"><h4 style="color:var(--c-renderer-svg)">Renderer-SVG</h4><div class="fp-subtitle" data-i18n="fp_rsvg_sub">8개 규칙 · SVG 시각화 · 균형형</div><div class="fp-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ring-bg)" stroke-width="8"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--c-renderer-svg)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="249" stroke-linecap="round" opacity="0.3"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--ring-bg)" stroke-width="6"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--c-renderer-svg)" stroke-width="6" stroke-dasharray="251" stroke-dashoffset="209" stroke-linecap="round" opacity="0.5"/></svg><div class="fp-center"><span class="fp-big">65</span><span>items</span></div></div><div class="fp-stats"><div><span data-i18n="fp_rules">규칙</span> <span class="fp-stat-val">8</span></div><div><span data-i18n="fp_density">밀도</span> <span class="fp-stat-val">8.1</span></div><div><span data-i18n="fp_viol2">위반</span> <span class="fp-stat-val">0</span></div><div><span data-i18n="fp_impl">구현비</span> <span class="fp-stat-val">22%</span></div></div></div>
+      <div class="fingerprint-card"><h4 style="color:var(--c-math)">Math Engine</h4><div class="fp-subtitle" data-i18n="fp_math_sub">7개 규칙 · 수식 AST · Concerns Only</div><div class="fp-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ring-bg)" stroke-width="8"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--c-math)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="267" stroke-linecap="round" opacity="0.3"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--ring-bg)" stroke-width="6"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--c-math)" stroke-width="6" stroke-dasharray="251" stroke-dashoffset="223" stroke-linecap="round" opacity="0.5"/></svg><div class="fp-center"><span class="fp-big">47</span><span>items</span></div></div><div class="fp-stats"><div><span data-i18n="fp_rules">규칙</span> <span class="fp-stat-val">7</span></div><div><span data-i18n="fp_density">밀도</span> <span class="fp-stat-val">6.7</span></div><div><span data-i18n="fp_viol2">위반</span> <span class="fp-stat-val">0</span></div><div><span data-i18n="fp_explore">탐색비</span> <span class="fp-stat-val">22%</span></div></div></div>
+      <div class="fingerprint-card"><h4 style="color:var(--c-realtime)">Realtime</h4><div class="fp-subtitle" data-i18n="fp_rt_sub">7개 규칙 · 최신 프로젝트 · 최고 구현 비율</div><div class="fp-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ring-bg)" stroke-width="8"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--c-realtime)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="286" stroke-linecap="round" opacity="0.3"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--ring-bg)" stroke-width="6"/><circle cx="60" cy="60" r="40" fill="none" stroke="var(--c-realtime)" stroke-width="6" stroke-dasharray="251" stroke-dashoffset="227" stroke-linecap="round" opacity="0.5"/></svg><div class="fp-center"><span class="fp-big">~28</span><span>items</span></div></div><div class="fp-stats"><div><span data-i18n="fp_rules">규칙</span> <span class="fp-stat-val">7</span></div><div><span data-i18n="fp_density">밀도</span> <span class="fp-stat-val">~4</span></div><div><span data-i18n="fp_viol2">위반</span> <span class="fp-stat-val">0</span></div><div><span data-i18n="fp_impl">구현비</span> <span class="fp-stat-val">29%</span></div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 04: Rule Intensity ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">04</span><h2 class="section-title" data-i18n="s04_title">규칙 참조 강도: 코드를 바꿀 때 규칙을 몇 번 확인하는가</h2></div>
+    <p class="section-desc" data-i18n="s04_desc">코드 변경(create + modify) 1건당 규칙 참조 횟수. 이 지표가 에이전트의 '신중함 레벨'을 나타낸다.</p>
+    <div class="card">
+      <div class="bar-chart">
+        <div class="bar-row" data-tt-title="Compiler" data-tt-detail="3,803 rule matches / 770 code changes"><div class="bar-label"><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></div><div class="bar-track"><div class="bar-fill rose" style="width:100%"></div></div><div class="bar-value">4.94x</div></div>
+        <div class="bar-row" data-tt-title="Full-stack" data-tt-detail="492 rule matches / 283 code changes"><div class="bar-label"><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></div><div class="bar-track"><div class="bar-fill blue" style="width:35.2%"></div></div><div class="bar-value">1.74x</div></div>
+        <div class="bar-row" data-tt-title="Renderer-SVG" data-tt-detail="51 rule matches / 393 code changes"><div class="bar-label"><span class="pbadge pb-renderer-svg"><span class="pb-dot"></span>Renderer-SVG</span></div><div class="bar-track"><div class="bar-fill purple" style="width:2.6%"></div></div><div class="bar-value">0.13x</div></div>
+        <div class="bar-row" data-tt-title="Math Engine" data-tt-detail="29 rule matches / 267 code changes"><div class="bar-label"><span class="pbadge pb-math"><span class="pb-dot"></span>Math Engine</span></div><div class="bar-track"><div class="bar-fill amber" style="width:2.2%"></div></div><div class="bar-value">0.11x</div></div>
+        <div class="bar-row" data-tt-title="Renderer-GL" data-tt-detail="31 rule matches / 433 code changes"><div class="bar-label"><span class="pbadge pb-renderer-gl"><span class="pb-dot"></span>Renderer-GL</span></div><div class="bar-track"><div class="bar-fill green" style="width:1.4%"></div></div><div class="bar-value">0.07x</div></div>
+        <div class="bar-row" data-tt-title="Realtime" data-tt-detail="2 rule matches / 60 code changes"><div class="bar-label"><span class="pbadge pb-realtime"><span class="pb-dot"></span>Realtime</span></div><div class="bar-track"><div class="bar-fill rose" style="width:0.6%"></div></div><div class="bar-value">0.03x</div></div>
+      </div>
+    </div>
+    <div class="callout" style="border-left-color:var(--accent-rose)"><div class="callout-icon">&#9889;</div><div class="callout-text" data-i18n="s04_callout"><strong>165배 차이.</strong> <span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span>는 코드 한 줄 바꿀 때 규칙을 5번 확인하고, <span class='pbadge pb-realtime'><span class='pb-dot'></span>Realtime</span>은 33번 바꿔야 규칙을 1번 본다. 이 차이는 규칙의 양(111 vs ~28)보다 <strong>도메인의 위험 수준</strong>이 결정한다 — <span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span>는 컴파일러 파이프라인으로, 패스 순서 하나가 틀려도 전체가 깨진다.</div></div>
+  </div>
+
+  <!-- ═══ SECTION 05: Violations ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">05</span><h2 class="section-title" data-i18n="s05_title">위반 분석: 에이전트는 어디서 실수하는가</h2></div>
+    <p class="section-desc" data-i18n="s05_desc">149건의 위반을 분류하면, 에이전트의 체계적 약점이 드러난다.</p>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-rose)"></span><span data-i18n="s05_chart1">위반 유형 분포</span></div>
+        <div class="donut-container">
+          <div class="donut-chart" id="violationDonut">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--ring-bg)" stroke-width="18"/>
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--accent-rose)" stroke-width="18" stroke-dasharray="102 287" stroke-dashoffset="0" stroke-linecap="round" class="donut-seg" data-idx="0"/>
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--accent-amber)" stroke-width="18" stroke-dasharray="78 311" stroke-dashoffset="-102" stroke-linecap="round" class="donut-seg" data-idx="1"/>
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--accent-purple)" stroke-width="18" stroke-dasharray="66 323" stroke-dashoffset="-180" stroke-linecap="round" class="donut-seg" data-idx="2"/>
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--accent-blue)" stroke-width="18" stroke-dasharray="37 352" stroke-dashoffset="-246" stroke-linecap="round" class="donut-seg" data-idx="3"/>
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--accent-teal)" stroke-width="18" stroke-dasharray="29 360" stroke-dashoffset="-283" stroke-linecap="round" class="donut-seg" data-idx="4"/>
+              <circle cx="80" cy="80" r="62" fill="none" stroke="var(--text-muted)" stroke-width="18" stroke-dasharray="78 311" stroke-dashoffset="-312" stroke-linecap="round" class="donut-seg" data-idx="5"/>
+            </svg>
+            <div class="donut-center"><div class="big">149</div><div class="small">violations</div></div>
+          </div>
+          <div class="donut-legend" id="donutLegend">
+            <div class="donut-legend-item" data-idx="0"><div class="donut-legend-swatch" style="background:var(--accent-rose)"></div><span data-i18n="donut_0">파일 크기/구조 (39건, 26%)</span></div>
+            <div class="donut-legend-item" data-idx="1"><div class="donut-legend-swatch" style="background:var(--accent-amber)"></div><span data-i18n="donut_1">import/경로 정합성 (30건, 20%)</span></div>
+            <div class="donut-legend-item" data-idx="2"><div class="donut-legend-swatch" style="background:var(--accent-purple)"></div><span data-i18n="donut_2">타입 안전성 (25건, 17%)</span></div>
+            <div class="donut-legend-item" data-idx="3"><div class="donut-legend-swatch" style="background:var(--accent-blue)"></div><span data-i18n="donut_3">순서/시퀀스 (14건, 9%)</span></div>
+            <div class="donut-legend-item" data-idx="4"><div class="donut-legend-swatch" style="background:var(--accent-teal)"></div><span data-i18n="donut_4">동기화 누락 (11건, 7%)</span></div>
+            <div class="donut-legend-item" data-idx="5"><div class="donut-legend-swatch" style="background:var(--text-muted)"></div><span data-i18n="donut_5">기타 (30건, 20%)</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-amber)"></span><span data-i18n="s05_chart2">카테고리별 위반율</span></div>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px"><span data-i18n="s05_chart2_sub">규칙 참조 대비 위반이 발생한 비율. Specifics가 가장 높다.</span></p>
+        <div class="bar-chart">
+          <div class="bar-row" data-tt-title="Compiler Specifics" data-tt-detail="70 violations / 1,001 refs"><div class="bar-label" style="font-size:12px"><span class="pbadge pb-compiler" style="font-size:10px"><span class="pb-dot"></span>Comp.</span> Specifics</div><div class="bar-track"><div class="bar-fill rose" style="width:100%"></div></div><div class="bar-value">6.99%</div></div>
+          <div class="bar-row" data-tt-title="Full-stack Always" data-tt-detail="1 violation / 18 refs"><div class="bar-label" style="font-size:12px"><span class="pbadge pb-fullstack" style="font-size:10px"><span class="pb-dot"></span>Full</span> Always</div><div class="bar-track"><div class="bar-fill blue" style="width:79.5%"></div></div><div class="bar-value">5.56%</div></div>
+          <div class="bar-row" data-tt-title="Full-stack Concerns" data-tt-detail="6 violations / 228 refs"><div class="bar-label" style="font-size:12px"><span class="pbadge pb-fullstack" style="font-size:10px"><span class="pb-dot"></span>Full</span> Concerns</div><div class="bar-track"><div class="bar-fill blue" style="width:37.6%"></div></div><div class="bar-value">2.63%</div></div>
+          <div class="bar-row" data-tt-title="Compiler Concerns" data-tt-detail="42 violations / 1,843 refs"><div class="bar-label" style="font-size:12px"><span class="pbadge pb-compiler" style="font-size:10px"><span class="pb-dot"></span>Comp.</span> Concerns</div><div class="bar-track"><div class="bar-fill teal" style="width:32.6%"></div></div><div class="bar-value">2.28%</div></div>
+          <div class="bar-row" data-tt-title="Full-stack Specifics" data-tt-detail="4 violations / 212 refs"><div class="bar-label" style="font-size:12px"><span class="pbadge pb-fullstack" style="font-size:10px"><span class="pb-dot"></span>Full</span> Specifics</div><div class="bar-track"><div class="bar-fill purple" style="width:27%"></div></div><div class="bar-value">1.89%</div></div>
+          <div class="bar-row" data-tt-title="Compiler Always" data-tt-detail="5 violations / 664 refs"><div class="bar-label" style="font-size:12px"><span class="pbadge pb-compiler" style="font-size:10px"><span class="pb-dot"></span>Comp.</span> Always</div><div class="bar-track"><div class="bar-fill green" style="width:10.7%"></div></div><div class="bar-value">0.75%</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box"><h4 data-i18n="s05_insight_title">에이전트의 3대 체계적 약점</h4>
+      <ul>
+        <li data-i18n="s05_i1"><strong>파일 크기/구조 위반 (26%)</strong> — 렌더러 파일이 300줄 제한을 초과하거나 여러 도메인 로직이 한 파일에 혼합. 에이전트는 기능 구현에 집중하면서 파일 크기 제약을 잊는 경향이 있다.</li>
+        <li data-i18n="s05_i2"><strong>import/경로 정합성 위반 (20%)</strong> — 리네이밍 시 영향받는 모든 파일을 파악하지 못함. 에이전트의 '영향 범위 추론' 능력이 가장 취약한 영역.</li>
+        <li data-i18n="s05_i3"><strong>타입 안전성 위반 (17%)</strong> — any 타입 사용, 타입 가드 누락. 빠르게 코드를 만들려는 압박이 타입 정밀도를 희생시킨다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 06: Top Offenders ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">06</span><h2 class="section-title" data-i18n="s06_title">위반이 집중되는 규칙: Top Offenders</h2></div>
+    <div class="card full-width" style="overflow-x:auto">
+      <table class="data-table"><thead><tr><th data-i18n="th_rule">규칙</th><th data-i18n="th_proj">프로젝트</th><th data-i18n="th_cat">카테고리</th><th data-i18n="th_items">아이템</th><th data-i18n="th_refs">참조</th><th data-i18n="th_viols">위반</th><th data-i18n="th_violpct">위반율</th><th data-i18n="th_topic">핵심 주제</th></tr></thead>
+      <tbody>
+        <tr style="background:rgba(240,96,136,0.05)"><td class="mono" style="color:var(--accent-rose);font-weight:600">S-compiler</td><td><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></td><td><span class="tag tag-purple">specifics</span></td><td class="mono">20</td><td class="mono">777</td><td class="mono" style="color:var(--accent-rose);font-weight:600">64</td><td class="mono">8.24%</td><td data-i18n="t06_r1">패스 순서, 책임 분리</td></tr>
+        <tr><td class="mono" style="color:var(--accent-amber);font-weight:600">C1</td><td><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></td><td><span class="tag tag-blue">concerns</span></td><td class="mono">10</td><td class="mono">1,016</td><td class="mono" style="color:var(--accent-amber)">30</td><td class="mono">2.95%</td><td data-i18n="t06_r2">모듈 구조, import 경로</td></tr>
+        <tr><td class="mono">S-pipeline</td><td><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></td><td><span class="tag tag-purple">specifics</span></td><td class="mono">&mdash;</td><td class="mono">188</td><td class="mono">21</td><td class="mono">11.2%</td><td data-i18n="t06_r3">문서 간 수치 정합성</td></tr>
+        <tr><td class="mono">C3</td><td><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></td><td><span class="tag tag-blue">concerns</span></td><td class="mono">11</td><td class="mono">223</td><td class="mono">8</td><td class="mono">3.59%</td><td data-i18n="t06_r4">테스트 독립성</td></tr>
+        <tr><td class="mono">S-renderer</td><td><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></td><td><span class="tag tag-purple">specifics</span></td><td class="mono">11</td><td class="mono">122</td><td class="mono">6</td><td class="mono">4.92%</td><td data-i18n="t06_r5">파일 크기 제한</td></tr>
+        <tr><td class="mono">C1</td><td><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></td><td><span class="tag tag-blue">concerns</span></td><td class="mono">14</td><td class="mono">51</td><td class="mono">3</td><td class="mono">5.88%</td><td data-i18n="t06_r6">파일 구조, 네이밍</td></tr>
+        <tr style="border-top:2px solid var(--border)"><td class="mono" style="color:var(--accent-green)">S-konva</td><td><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></td><td><span class="tag tag-purple">specifics</span></td><td class="mono" style="color:var(--accent-green);font-weight:600">45</td><td class="mono">27</td><td class="mono" style="color:var(--accent-green);font-weight:600">0</td><td class="mono">0%</td><td data-i18n="t06_r7">가장 상세하지만 위반 0</td></tr>
+        <tr><td class="mono" style="color:var(--accent-green)">S-zustand</td><td><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span></td><td><span class="tag tag-purple">specifics</span></td><td class="mono">16</td><td class="mono">79</td><td class="mono" style="color:var(--accent-green)">0</td><td class="mono">0%</td><td data-i18n="t06_r8">상태 관리</td></tr>
+        <tr><td class="mono" style="color:var(--accent-green)">S-database</td><td><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span></td><td><span class="tag tag-purple">specifics</span></td><td class="mono">22</td><td class="mono">12</td><td class="mono" style="color:var(--accent-green)">0</td><td class="mono">0%</td><td data-i18n="t06_r9">DB 패턴</td></tr>
+      </tbody></table>
+    </div>
+    <div class="callout" style="border-left-color:var(--accent-green)"><div class="callout-icon">&#9733;</div><div class="callout-text" data-i18n="s06_callout"><strong>S-konva (45개 아이템)는 가장 상세한 규칙이지만 위반이 0건.</strong> 반면 S-compiler (20개 아이템)는 64건의 위반을 기록. 규칙의 양이 아니라 <strong>규칙이 다루는 도메인의 순서 의존성과 파급 범위</strong>가 위반 발생을 결정한다.</div></div>
+  </div>
+
+  <!-- ═══ SECTION 07: Rule Ecosystem ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">07</span><h2 class="section-title" data-i18n="s07_title">규칙 생태계: 공유 헌법과 도메인 법률</h2></div>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-teal)"></span><span data-i18n="s07_shared">공유 규칙 (5개 프로젝트 이상)</span></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px;background:rgba(92,224,216,0.05);border-radius:8px"><div style="font-family:'JetBrains Mono';font-weight:700;color:var(--accent-teal);width:90px">principles</div><div style="font-size:13px;color:var(--text-dim);flex:1" data-i18n="s07_principles">핵심 원칙 — 레이어 의존성, 불변성, 패키지 경계</div><span class="tag tag-teal" data-i18n="s07_5proj">5개 프로젝트</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px;background:rgba(108,140,255,0.05);border-radius:8px"><div style="font-family:'JetBrains Mono';font-weight:700;color:var(--accent-blue);width:90px">C1 ~ C5</div><div style="font-size:13px;color:var(--text-dim);flex:1" data-i18n="s07_concerns">모듈 구조, 에러 처리, 테스트, 격리, 정적 분석</div><span class="tag tag-blue" data-i18n="s07_5proj">5개 프로젝트</span></div>
+        </div>
+        <div style="margin-top:16px;padding:12px;border:1px dashed var(--border);border-radius:8px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:8px" data-i18n="s07_cross">교차 공유 (2개 프로젝트)</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="tag tag-purple" data-i18n="s07_c6">C6 (레지스트리 패턴)</span><span class="tag tag-amber" data-i18n="s07_zus">S-zustand (상태 관리)</span></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-purple)"></span><span data-i18n="s07_domain">도메인 고유 규칙 (1개 프로젝트 전용)</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg-subtle)"><span class="pbadge pb-fullstack"><span class="pb-dot"></span>Full-stack</span><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end"><span class="tag tag-blue">S-konva</span><span class="tag tag-blue">S-server</span><span class="tag tag-blue">S-tiptap</span><span class="tag tag-blue">S-temporal</span><span class="tag tag-blue">+7</span></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg-subtle)"><span class="pbadge pb-compiler"><span class="pb-dot"></span>Compiler</span><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end"><span class="tag tag-teal">S-compiler</span><span class="tag tag-teal">S-pipeline</span><span class="tag tag-teal">S-renderer</span><span class="tag tag-teal">S-ir-ops</span></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg-subtle)"><span class="pbadge pb-renderer-gl"><span class="pb-dot"></span>Renderer-GL</span><div style="display:flex;gap:4px"><span class="tag tag-green">S-engine</span><span class="tag tag-green">S-export</span><span class="tag tag-green">S-store</span></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg-subtle)"><span class="pbadge pb-renderer-svg"><span class="pb-dot"></span>Renderer-SVG</span><div style="display:flex;gap:4px"><span class="tag tag-purple">S-primitives</span><span class="tag tag-purple">S-viewport</span></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><span class="pbadge pb-math"><span class="pb-dot"></span>Math Engine</span><span class="tag tag-amber" style="opacity:0.5" data-i18n="s07_none">아직 없음</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box"><h4>Insight</h4><p data-i18n="s07_insight"><strong>principles + C1~C5</strong>는 5개 프로젝트에 걸쳐 '헌법' 역할을 하며, 프로젝트별 <strong>S-접두사 Specifics</strong>가 도메인 전문 '세부법률'로 작동한다. 공유 규칙(C 시리즈)의 위반율은 <strong>2.3%</strong>인 반면, 도메인 규칙(S 시리즈)은 <strong>4.4%</strong>로 약 2배 높다. 범용 원칙은 에이전트가 잘 학습하지만, 프로젝트 고유 제약은 더 자주 놓친다.</p></div>
+  </div>
+
+  <!-- ═══ SECTION 08: Scatter ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">08</span><h2 class="section-title" data-i18n="s08_title">규칙 복잡도 vs 위반율: 무엇이 위반을 유발하는가</h2></div>
+    <p class="section-desc" data-i18n="s08_desc">규칙의 아이템 수(복잡도)가 많으면 위반이 많아질까? 데이터는 정반대를 보여준다.</p>
+    <div class="card full-width">
+      <div class="scatter-container">
+        <div class="scatter-axis-y" style="left:8px;top:10%">8%</div><div class="scatter-axis-y" style="left:8px;top:30%">6%</div><div class="scatter-axis-y" style="left:8px;top:50%">4%</div><div class="scatter-axis-y" style="left:8px;top:70%">2%</div><div class="scatter-axis-y" style="left:8px;top:90%">0%</div>
+        <div class="scatter-axis-x" style="bottom:4px;left:10%">5</div><div class="scatter-axis-x" style="bottom:4px;left:30%">10</div><div class="scatter-axis-x" style="bottom:4px;left:50%">20</div><div class="scatter-axis-x" style="bottom:4px;left:70%">30</div><div class="scatter-axis-x" style="bottom:4px;left:90%">45</div>
+        <div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text-muted)" data-i18n="scatter_x">규칙 아이템 수 (복잡도) &rarr;</div>
+        <div style="position:absolute;left:-2px;top:50%;transform:rotate(-90deg) translateX(-50%);transform-origin:0 0;font-size:11px;color:var(--text-muted);white-space:nowrap" data-i18n="scatter_y">위반율 &rarr;</div>
+        <div style="position:absolute;left:40px;right:10px;top:10%;border-top:1px dashed var(--gridline)"></div><div style="position:absolute;left:40px;right:10px;top:30%;border-top:1px dashed var(--gridline)"></div><div style="position:absolute;left:40px;right:10px;top:50%;border-top:1px dashed var(--gridline)"></div><div style="position:absolute;left:40px;right:10px;top:70%;border-top:1px dashed var(--gridline)"></div><div style="position:absolute;left:40px;right:10px;top:90%;border-top:1px dashed var(--gridline)"></div>
+        <div class="scatter-dot" style="left:50%;top:8%;background:var(--c-compiler);width:26px;height:26px;font-size:11px" data-tt-title="S-compiler" data-tt-detail="20 items · 8.24% violation · 777 refs · Compiler">C</div><div class="scatter-label" style="left:50%;top:1%">S-compiler</div>
+        <div class="scatter-dot" style="left:35%;top:27%;background:var(--c-fullstack);width:16px;height:16px" data-tt-title="C1 (Full-stack)" data-tt-detail="14 items · 5.88% violation · 51 refs">F</div>
+        <div class="scatter-dot" style="left:24%;top:38%;background:var(--c-compiler);width:16px;height:16px" data-tt-title="S-renderer" data-tt-detail="11 items · 4.92% violation · 122 refs · Compiler">C</div><div class="scatter-label" style="left:24%;top:32%">S-renderer</div>
+        <div class="scatter-dot" style="left:50%;top:48%;background:var(--c-fullstack);width:14px;height:14px" data-tt-title="S-temporal" data-tt-detail="20 items · 4.0% violation · 25 refs · Full-stack">F</div>
+        <div class="scatter-dot" style="left:24%;top:53%;background:var(--c-compiler);width:14px;height:14px" data-tt-title="C3 (Compiler)" data-tt-detail="11 items · 3.59% violation · 223 refs">C</div>
+        <div class="scatter-dot" style="left:20%;top:60%;background:var(--c-compiler);width:22px;height:22px;font-size:10px" data-tt-title="C1 (Compiler)" data-tt-detail="10 items · 2.95% violation · 1,016 refs (most referenced!)">C</div><div class="scatter-label" style="left:20%;top:54%">C1</div>
+        <div class="scatter-dot" style="left:70%;top:72%;background:var(--c-fullstack);width:14px;height:14px" data-tt-title="S-server" data-tt-detail="30 items · 2.17% violation · 92 refs · Full-stack">F</div><div class="scatter-label" style="left:70%;top:66%">S-server</div>
+        <div class="scatter-dot" style="left:90%;top:90%;background:var(--accent-green);width:22px;height:22px;font-size:10px;border:2px solid var(--accent-green)" data-tt-title="S-konva (Full-stack)" data-tt-detail="45 items · 0% violation · 27 refs · Most detailed rule!">F</div><div class="scatter-label" style="left:90%;top:83%">S-konva (0%!)</div>
+        <div class="scatter-dot" style="left:38%;top:90%;background:var(--accent-green);width:14px;height:14px" data-tt-title="S-zustand (Compiler)" data-tt-detail="16 items · 0% violation · 79 refs">C</div><div class="scatter-label" style="left:38%;top:84%">S-zustand</div>
+        <div class="scatter-dot" style="left:55%;top:90%;background:var(--accent-green);width:14px;height:14px" data-tt-title="S-database (Full-stack)" data-tt-detail="22 items · 0% violation · 12 refs">F</div>
+        <div class="scatter-dot" style="left:70%;top:90%;background:var(--accent-green);width:14px;height:14px" data-tt-title="S-zustand (Full-stack)" data-tt-detail="30 items · 0% violation · 10 refs">F</div>
+      </div>
+    </div>
+    <div class="insight-box" style="background:var(--insight-rose-bg);border-color:var(--insight-rose-border)">
+      <h4 style="color:var(--accent-rose)" data-i18n="s08_finding">핵심 발견: 규칙 복잡도와 위반율은 반비례한다</h4>
+      <p data-i18n="s08_p">직관과 반대로, <strong>아이템이 많은 규칙(S-konva 45개, S-server 30개)이 오히려 위반율 0%</strong>를 기록한다. 반면 <strong>아이템이 적은 규칙(S-compiler 20개)이 최고 위반율 8.24%</strong>를 보인다.</p>
+      <ul>
+        <li data-i18n="s08_i1"><strong>상세한 규칙은 에이전트를 더 잘 가이드한다</strong> — 구체적 예시, DO/DON'T 패턴이 많을수록 에이전트가 명확하게 따른다.</li>
+        <li data-i18n="s08_i2"><strong>위반은 규칙의 부족이 아니라 도메인의 순서 의존성에서 발생한다</strong> — S-compiler의 '패스 순서' 같은 전역적 제약은 아이템 수와 관계없이 위반하기 쉽다.</li>
+        <li data-i18n="s08_i3"><strong>독립적 규칙 vs 순서 의존 규칙</strong> — S-konva(각 컴포넌트가 독립)는 하나를 지키면 다른 것에 영향 없다. S-compiler(패스 A &rarr; B &rarr; C 순서)는 하나를 바꾸면 전체가 흔들린다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 09: Conclusions ═══ -->
+  <div class="section">
+    <div class="section-header"><span class="section-number">09</span><h2 class="section-title" data-i18n="s09_title">결론: 규칙 시스템 설계를 위한 교훈</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div class="card" style="border-left:3px solid var(--accent-teal)"><div style="font-size:32px;margin-bottom:8px">01</div><h3 style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--accent-teal)" data-i18n="c09_1t">상세함이 준수를 만든다</h3><p style="font-size:13px;color:var(--text-dim)" data-i18n="c09_1p">45개 아이템 규칙(위반 0%)이 20개 아이템 규칙(위반 8%)보다 낫다. 구체적 예시와 코드 패턴이 에이전트를 올바른 길로 이끈다.</p></div>
+      <div class="card" style="border-left:3px solid var(--accent-amber)"><div style="font-size:32px;margin-bottom:8px">02</div><h3 style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--accent-amber)" data-i18n="c09_2t">순서 의존 규칙에 특별히 주의하라</h3><p style="font-size:13px;color:var(--text-dim)" data-i18n="c09_2p">파이프라인, 컴파일 패스, 마이그레이션 순서 같은 규칙은 위반 확률이 높다. 이런 규칙에는 자동 검증 메커니즘이 필요하다.</p></div>
+      <div class="card" style="border-left:3px solid var(--accent-purple)"><div style="font-size:32px;margin-bottom:8px">03</div><h3 style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--accent-purple)" data-i18n="c09_3t">2계층 구조가 작동한다</h3><p style="font-size:13px;color:var(--text-dim)" data-i18n="c09_3p">공유 Concerns(위반율 2.3%)가 도메인 Specifics(위반율 4.4%)보다 잘 지켜진다. 범용 원칙을 먼저 확립하고, 도메인 규칙을 점진적으로 추가하는 전략이 유효하다.</p></div>
+      <div class="card" style="border-left:3px solid var(--accent-rose)"><div style="font-size:32px;margin-bottom:8px">04</div><h3 style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--accent-rose)" data-i18n="c09_4t">에이전트의 맹점은 '영향 범위 추론'</h3><p style="font-size:13px;color:var(--text-dim)" data-i18n="c09_4p">위반의 46%가 '다른 파일/문서/규칙과의 정합성 누락'에서 발생. 에이전트는 현재 파일에 집중하면서 파급 효과를 과소평가한다.</p></div>
+    </div>
+  </div>
+
+  <div class="footer">Baden Rule System Analysis &middot; Generated 2026-04-13 &middot; 14,988 events across 7 projects</div>
+</div>
+
+<script>
+// ═══ i18n Dictionary ═══
+const I = {
+  legend_title: { ko: '프로젝트 범례', en: 'Project Legend' },
+  legend_fullstack: { ko: '26규칙 · 408항목', en: '26 rules · 408 items' },
+  legend_compiler: { ko: '11규칙 · 111항목', en: '11 rules · 111 items' },
+  legend_rgl: { ko: '9규칙 · 70항목', en: '9 rules · 70 items' },
+  legend_rsvg: { ko: '8규칙 · 65항목', en: '8 rules · 65 items' },
+  legend_math: { ko: '7규칙 · 47항목', en: '7 rules · 47 items' },
+  legend_rt: { ko: '7규칙 · ~28항목', en: '7 rules · ~28 items' },
+  article_link: { ko: '관련 글 읽기', en: 'Read Article' },
+  hero_desc: { ko: '7개 프로젝트, 14,988 이벤트, 61개 규칙 파일에서 추출한 AI 코딩 에이전트의 규칙 준수 행동 분석', en: 'Behavioral analysis of AI coding agent rule compliance across 7 projects, 14,988 events, and 61 rule files' },
+  stat_events: { ko: '전체 이벤트', en: 'Total Events' }, stat_rules: { ko: '규칙 파일', en: 'Rule Files' },
+  stat_items: { ko: '규칙 항목 (MUST/PREFER)', en: 'Rule Items (MUST/PREFER)' }, stat_viols: { ko: '위반 감지', en: 'Violations Caught' },
+  s00_title: { ko: '작업 파이프라인: 규칙 기반 AI 코딩은 이렇게 작동한다', en: 'Work Pipeline: How Rule-Based AI Coding Works' },
+  s00_desc: { ko: '모든 코드 작업은 다음 파이프라인을 따른다. Rule Agent가 작업 전후에 개입하여 규칙 위반을 사전에 차단하고, 사후에 검증한다.', en: 'Every code task follows this pipeline. The Rule Agent intervenes before and after implementation to prevent violations proactively and verify compliance retroactively.' },
+  pipe_plan: { ko: '계획 수립', en: 'Planning' }, pipe_plan_sub: { ko: '작업 분석 및 접근 방식 결정', en: 'Task analysis & approach decision' },
+  pipe_pre: { ko: '사전 규칙 검토', en: 'Pre-Review' }, pipe_pre_sub: { ko: 'Rule Agent가 관련 규칙 로드 및 위반 가능성 보고', en: 'Rule Agent loads relevant rules & reports potential violations' },
+  pipe_pass1: { ko: 'Pass', en: 'Pass' }, pipe_pass1_sub: { ko: '위반 없음 확인 시 진행 허가', en: 'Proceed if no violations found' },
+  pipe_impl: { ko: '코드 구현', en: 'Implementation' }, pipe_impl_sub: { ko: '실제 코드 작성 및 수정', en: 'Actual code writing & modification' },
+  pipe_post: { ko: '사후 규칙 검증', en: 'Post-Verify' }, pipe_post_sub: { ko: 'Rule Agent가 변경 결과를 규칙 대비 검증', en: 'Rule Agent verifies changes against rules' },
+  pipe_done: { ko: 'Pass & 완료', en: 'Pass & Done' }, pipe_done_sub: { ko: '검증 통과 시 작업 완료 처리', en: 'Task completed upon verification pass' },
+  s00_insight_title: { ko: '이 리포트가 다루는 것', en: 'What This Report Covers' },
+  s00_insight_body: { ko: '위 파이프라인에서 발생하는 모든 이벤트(계획, 탐색, 구현, 규칙 참조, 위반 감지, 완료)가 Baden에 수집된다. 이 리포트는 7개 프로젝트에서 수집된 <strong>14,988건의 이벤트</strong>를 분석하여, 규칙 시스템이 AI 에이전트의 행동에 어떤 영향을 미치는지 추적한다.', en: 'All events from this pipeline (planning, exploration, implementation, rule references, violation detection, completion) are collected by Baden. This report analyzes <strong>14,988 events</strong> across 7 projects to track how rule systems influence AI agent behavior.' },
+  s01_title: { ko: '규칙 볼륨: 프로젝트별 규칙 규모', en: 'Rule Volume: Scale per Project' },
+  s01_desc: { ko: '프로젝트 성숙도와 도메인 복잡도에 따라 규칙 시스템의 크기가 극적으로 차이난다.', en: 'Rule system scale varies dramatically with project maturity and domain complexity.' },
+  s01_chart1: { ko: '규칙 아이템 수 (MUST / MUST NOT / PREFER)', en: 'Rule Item Count (MUST / MUST NOT / PREFER)' },
+  s01_chart2: { ko: '규칙 구성 (카테고리별 파일 수)', en: 'Rule Composition (Files per Category)' },
+  s01_insight: { ko: "<span class='pbadge pb-fullstack'><span class='pb-dot'></span>Full-stack</span>은 408개 규칙 아이템으로 나머지 5개 프로젝트 합산(321개)보다 27% 더 많다. 특히 <strong>Specifics 규칙이 16개</strong>로, 도메인별 세분화가 가장 깊은 프로젝트다. 반면 <span class='pbadge pb-math'><span class='pb-dot'></span>Math Engine</span>은 Specifics가 0개 — Concerns만으로 아키텍처 제약을 정의하는 '원칙 중심' 접근을 취하고 있다.", en: "<span class='pbadge pb-fullstack'><span class='pb-dot'></span>Full-stack</span> has 408 rule items — 27% more than the other 5 projects combined (321). With <strong>16 Specifics rules</strong>, it has the deepest domain specialization. In contrast, <span class='pbadge pb-math'><span class='pb-dot'></span>Math Engine</span> has 0 Specifics — a 'principles-first' approach using only Concerns." },
+  s02_title: { ko: '행동 DNA: 에이전트의 작업 스타일 지문', en: 'Behavioral DNA: Agent Work Style Fingerprint' },
+  s02_desc: { ko: '같은 에이전트라도 프로젝트 규칙 구성에 따라 완전히 다른 행동 패턴을 보인다.', en: 'The same agent shows completely different behavioral patterns depending on project rule composition.' },
+  s02_chart: { ko: '프로젝트별 행동 카테고리 분포', en: 'Behavioral Category Distribution per Project' },
+  leg_explore: { ko: '탐색 (Exploration)', en: 'Exploration' }, leg_plan: { ko: '계획 (Planning)', en: 'Planning' },
+  leg_impl: { ko: '구현 (Implementation)', en: 'Implementation' }, leg_comply: { ko: '규칙 준수 (Compliance)', en: 'Compliance' },
+  s02_callout: { ko: "<span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span>는 에이전트 시간의 <strong>51%를 규칙 확인에 사용</strong>한다. 111개 규칙 아이템이 코드 변경 1건당 평균 4.94회 규칙 참조를 유발한다. 반면 규칙 볼륨이 가장 큰 <span class='pbadge pb-fullstack'><span class='pb-dot'></span>Full-stack</span>은 37%에 그침 — 규칙의 <em>양</em>보다 <em>밀도와 도메인 위험도</em>가 에이전트 행동을 더 크게 좌우한다.", en: "<span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span> spends <strong>51% of agent time on rule checks</strong>. Its 111 rule items trigger 4.94 rule references per code change. Meanwhile, <span class='pbadge pb-fullstack'><span class='pb-dot'></span>Full-stack</span> — with the largest rule volume — stays at 37%. Rule <em>density and domain risk</em> dominate over sheer <em>quantity</em>." },
+  s03_title: { ko: '프로젝트 지문: 6가지 핵심 지표', en: 'Project Fingerprints: 6 Key Metrics' },
+  s03_desc: { ko: '각 프로젝트의 성격을 규칙 파일 수, 아이템 밀도, 코드 변경당 규칙 참조, 구현 비율, 위반율, 생성/수정 비율로 요약.', en: 'Summarizing each project by rule count, item density, rules-per-change, implementation ratio, violation rate, and create/modify ratio.' },
+  fp_fs_sub: { ko: '26개 규칙 · 16 Specifics · 성숙한 풀스택', en: '26 rules · 16 Specifics · Mature full-stack' },
+  fp_cp_sub: { ko: '11개 규칙 · 파이프라인 중심 · 최고 규칙 참조율', en: '11 rules · Pipeline-centric · Highest rule ref rate' },
+  fp_rgl_sub: { ko: '9개 규칙 · WebGL/SDF · 위반 0건', en: '9 rules · WebGL/SDF · 0 violations' },
+  fp_rsvg_sub: { ko: '8개 규칙 · SVG 시각화 · 균형형', en: '8 rules · SVG visualization · Balanced' },
+  fp_math_sub: { ko: '7개 규칙 · 수식 AST · Concerns Only', en: '7 rules · Math AST · Concerns Only' },
+  fp_rt_sub: { ko: '7개 규칙 · 최신 프로젝트 · 최고 구현 비율', en: '7 rules · Newest project · Highest impl ratio' },
+  fp_rules: { ko: '규칙', en: 'Rules' }, fp_density: { ko: '밀도', en: 'Density' }, fp_viol: { ko: '위반율', en: 'Viol.%' }, fp_viol2: { ko: '위반', en: 'Viol.' },
+  fp_create: { ko: '생성비', en: 'Create%' }, fp_refchg: { ko: '참조/변경', en: 'Refs/chg' }, fp_plan: { ko: '계획비', en: 'Plan%' },
+  fp_impl: { ko: '구현비', en: 'Impl%' }, fp_explore: { ko: '탐색비', en: 'Explore%' },
+  s04_title: { ko: '규칙 참조 강도: 코드를 바꿀 때 규칙을 몇 번 확인하는가', en: 'Rule Reference Intensity: How Many Checks per Code Change' },
+  s04_desc: { ko: "코드 변경(create + modify) 1건당 규칙 참조 횟수. 이 지표가 에이전트의 '신중함 레벨'을 나타낸다.", en: "Rule references per code change (create + modify). This metric indicates the agent's 'caution level'." },
+  s04_callout: { ko: "<strong>165배 차이.</strong> <span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span>는 코드 한 줄 바꿀 때 규칙을 5번 확인하고, <span class='pbadge pb-realtime'><span class='pb-dot'></span>Realtime</span>은 33번 바꿔야 규칙을 1번 본다. 이 차이는 규칙의 양(111 vs ~28)보다 <strong>도메인의 위험 수준</strong>이 결정한다.", en: "<strong>165x gap.</strong> <span class='pbadge pb-compiler'><span class='pb-dot'></span>Compiler</span> checks rules 5 times per code change. <span class='pbadge pb-realtime'><span class='pb-dot'></span>Realtime</span> changes code 33 times before checking once. This difference is driven by <strong>domain risk level</strong>, not rule quantity." },
+  s05_title: { ko: '위반 분석: 에이전트는 어디서 실수하는가', en: 'Violation Analysis: Where Agents Make Mistakes' },
+  s05_desc: { ko: '149건의 위반을 분류하면, 에이전트의 체계적 약점이 드러난다.', en: 'Classifying 149 violations reveals the agent\'s systematic blind spots.' },
+  s05_chart1: { ko: '위반 유형 분포', en: 'Violation Type Distribution' },
+  s05_chart2: { ko: '카테고리별 위반율', en: 'Violation Rate by Category' },
+  s05_chart2_sub: { ko: '규칙 참조 대비 위반이 발생한 비율. Specifics가 가장 높다.', en: 'Violations as percentage of total references. Specifics rank highest.' },
+  donut_0: { ko: '파일 크기/구조 (39건, 26%)', en: 'File size/structure (39, 26%)' },
+  donut_1: { ko: 'import/경로 정합성 (30건, 20%)', en: 'Import/path consistency (30, 20%)' },
+  donut_2: { ko: '타입 안전성 (25건, 17%)', en: 'Type safety (25, 17%)' },
+  donut_3: { ko: '순서/시퀀스 (14건, 9%)', en: 'Order/sequence (14, 9%)' },
+  donut_4: { ko: '동기화 누락 (11건, 7%)', en: 'Sync missing (11, 7%)' },
+  donut_5: { ko: '기타 (30건, 20%)', en: 'Others (30, 20%)' },
+  s05_insight_title: { ko: '에이전트의 3대 체계적 약점', en: "Agent's 3 Systematic Blind Spots" },
+  s05_i1: { ko: '<strong>파일 크기/구조 위반 (26%)</strong> — 렌더러 파일이 300줄 제한을 초과하거나 여러 도메인 로직이 한 파일에 혼합. 에이전트는 기능 구현에 집중하면서 파일 크기 제약을 잊는 경향이 있다.', en: '<strong>File size/structure (26%)</strong> — Renderer files exceed 300-line limits or mix domain logic. Agents tend to forget file size constraints while focusing on implementation.' },
+  s05_i2: { ko: "<strong>import/경로 정합성 위반 (20%)</strong> — 리네이밍 시 영향받는 모든 파일을 파악하지 못함. 에이전트의 '영향 범위 추론' 능력이 가장 취약한 영역.", en: "<strong>Import/path consistency (20%)</strong> — Failing to identify all affected files during renames. The agent's weakest area: impact radius reasoning." },
+  s05_i3: { ko: '<strong>타입 안전성 위반 (17%)</strong> — any 타입 사용, 타입 가드 누락. 빠르게 코드를 만들려는 압박이 타입 정밀도를 희생시킨다.', en: '<strong>Type safety (17%)</strong> — Using `any` types, missing type guards. Speed pressure sacrifices type precision.' },
+  s06_title: { ko: '위반이 집중되는 규칙: Top Offenders', en: 'Most Violated Rules: Top Offenders' },
+  th_rule: { ko: '규칙', en: 'Rule' }, th_proj: { ko: '프로젝트', en: 'Project' }, th_cat: { ko: '카테고리', en: 'Category' },
+  th_items: { ko: '아이템', en: 'Items' }, th_refs: { ko: '참조', en: 'Refs' }, th_viols: { ko: '위반', en: 'Viols' },
+  th_violpct: { ko: '위반율', en: 'Viol.%' }, th_topic: { ko: '핵심 주제', en: 'Key Topic' },
+  t06_r1: { ko: '패스 순서, 책임 분리', en: 'Pass order, separation' }, t06_r2: { ko: '모듈 구조, import 경로', en: 'Module structure, imports' },
+  t06_r3: { ko: '문서 간 수치 정합성', en: 'Cross-doc numeric consistency' }, t06_r4: { ko: '테스트 독립성', en: 'Test independence' },
+  t06_r5: { ko: '파일 크기 제한', en: 'File size limit' }, t06_r6: { ko: '파일 구조, 네이밍', en: 'File structure, naming' },
+  t06_r7: { ko: '가장 상세하지만 위반 0', en: 'Most detailed, 0 violations' }, t06_r8: { ko: '상태 관리', en: 'State management' }, t06_r9: { ko: 'DB 패턴', en: 'DB patterns' },
+  s06_callout: { ko: '<strong>S-konva (45개 아이템)는 가장 상세한 규칙이지만 위반이 0건.</strong> 반면 S-compiler (20개 아이템)는 64건의 위반을 기록. 규칙의 양이 아니라 <strong>규칙이 다루는 도메인의 순서 의존성과 파급 범위</strong>가 위반 발생을 결정한다.', en: '<strong>S-konva (45 items) is the most detailed rule but has 0 violations.</strong> Meanwhile S-compiler (20 items) recorded 64. What determines violations isn\'t rule volume but <strong>the domain\'s sequential dependencies and blast radius</strong>.' },
+  s07_title: { ko: '규칙 생태계: 공유 헌법과 도메인 법률', en: 'Rule Ecosystem: Shared Constitution & Domain Laws' },
+  s07_shared: { ko: '공유 규칙 (5개 프로젝트 이상)', en: 'Shared Rules (5+ projects)' },
+  s07_principles: { ko: '핵심 원칙 — 레이어 의존성, 불변성, 패키지 경계', en: 'Core principles — layer deps, immutability, package boundaries' },
+  s07_concerns: { ko: '모듈 구조, 에러 처리, 테스트, 격리, 정적 분석', en: 'Module structure, error handling, testing, isolation, static analysis' },
+  s07_5proj: { ko: '5개 프로젝트', en: '5 projects' }, s07_cross: { ko: '교차 공유 (2개 프로젝트)', en: 'Cross-shared (2 projects)' },
+  s07_c6: { ko: 'C6 (레지스트리 패턴)', en: 'C6 (Registry pattern)' }, s07_zus: { ko: 'S-zustand (상태 관리)', en: 'S-zustand (State mgmt)' },
+  s07_domain: { ko: '도메인 고유 규칙 (1개 프로젝트 전용)', en: 'Domain-Specific Rules (Single Project)' },
+  s07_none: { ko: '아직 없음', en: 'None yet' },
+  s07_insight: { ko: "<strong>principles + C1~C5</strong>는 5개 프로젝트에 걸쳐 '헌법' 역할을 하며, 프로젝트별 <strong>S-접두사 Specifics</strong>가 도메인 전문 '세부법률'로 작동한다. 공유 규칙(C 시리즈)의 위반율은 <strong>2.3%</strong>인 반면, 도메인 규칙(S 시리즈)은 <strong>4.4%</strong>로 약 2배 높다.", en: "<strong>principles + C1~C5</strong> serve as the 'constitution' across 5 projects, while <strong>S-prefixed Specifics</strong> act as domain-specific 'statutes'. Shared rules (C-series) have a <strong>2.3%</strong> violation rate vs <strong>4.4%</strong> for domain rules — nearly 2x higher." },
+  s08_title: { ko: '규칙 복잡도 vs 위반율: 무엇이 위반을 유발하는가', en: 'Rule Complexity vs Violation Rate: What Causes Violations' },
+  s08_desc: { ko: '규칙의 아이템 수(복잡도)가 많으면 위반이 많아질까? 데이터는 정반대를 보여준다.', en: 'Do more rule items mean more violations? The data shows the opposite.' },
+  scatter_x: { ko: '규칙 아이템 수 (복잡도) &rarr;', en: 'Rule Item Count (Complexity) &rarr;' },
+  scatter_y: { ko: '위반율 &rarr;', en: 'Violation Rate &rarr;' },
+  s08_finding: { ko: '핵심 발견: 규칙 복잡도와 위반율은 반비례한다', en: 'Key Finding: Complexity and Violation Rate Are Inversely Correlated' },
+  s08_p: { ko: '직관과 반대로, <strong>아이템이 많은 규칙(S-konva 45개, S-server 30개)이 오히려 위반율 0%</strong>를 기록한다. 반면 <strong>아이템이 적은 규칙(S-compiler 20개)이 최고 위반율 8.24%</strong>를 보인다.', en: 'Counter-intuitively, <strong>detailed rules (S-konva 45 items, S-server 30) achieve 0% violation rate</strong>. Meanwhile, <strong>smaller rules (S-compiler 20 items) hit the highest rate at 8.24%</strong>.' },
+  s08_i1: { ko: '<strong>상세한 규칙은 에이전트를 더 잘 가이드한다</strong> — 구체적 예시, DO/DON\'T 패턴이 많을수록 에이전트가 명확하게 따른다.', en: '<strong>Detailed rules guide agents better</strong> — more concrete examples and DO/DON\'T patterns lead to clearer compliance.' },
+  s08_i2: { ko: "<strong>위반은 규칙의 부족이 아니라 도메인의 순서 의존성에서 발생한다</strong> — S-compiler의 '패스 순서' 같은 전역적 제약은 아이템 수와 관계없이 위반하기 쉽다.", en: "<strong>Violations stem from sequential dependencies, not rule scarcity</strong> — global constraints like S-compiler's 'pass order' are easy to violate regardless of item count." },
+  s08_i3: { ko: '<strong>독립적 규칙 vs 순서 의존 규칙</strong> — S-konva(각 컴포넌트가 독립)는 하나를 지키면 다른 것에 영향 없다. S-compiler(패스 A &rarr; B &rarr; C 순서)는 하나를 바꾸면 전체가 흔들린다.', en: '<strong>Independent vs sequential rules</strong> — S-konva (independent components) lets you comply one-by-one. S-compiler (pass A &rarr; B &rarr; C) — changing one shakes everything.' },
+  s09_title: { ko: '결론: 규칙 시스템 설계를 위한 교훈', en: 'Conclusions: Lessons for Rule System Design' },
+  c09_1t: { ko: '상세함이 준수를 만든다', en: 'Detail Drives Compliance' },
+  c09_1p: { ko: '45개 아이템 규칙(위반 0%)이 20개 아이템 규칙(위반 8%)보다 낫다. 구체적 예시와 코드 패턴이 에이전트를 올바른 길로 이끈다.', en: 'A 45-item rule (0% violations) outperforms a 20-item rule (8%). Concrete examples and code patterns guide agents correctly.' },
+  c09_2t: { ko: '순서 의존 규칙에 특별히 주의하라', en: 'Watch Sequential Rules Closely' },
+  c09_2p: { ko: '파이프라인, 컴파일 패스, 마이그레이션 순서 같은 규칙은 위반 확률이 높다. 이런 규칙에는 자동 검증 메커니즘이 필요하다.', en: 'Pipeline, compile pass, and migration order rules have high violation probability. These need automated verification.' },
+  c09_3t: { ko: '2계층 구조가 작동한다', en: 'Two-Tier Structure Works' },
+  c09_3p: { ko: '공유 Concerns(위반율 2.3%)가 도메인 Specifics(위반율 4.4%)보다 잘 지켜진다. 범용 원칙을 먼저 확립하고, 도메인 규칙을 점진적으로 추가하는 전략이 유효하다.', en: 'Shared Concerns (2.3% violation) are followed better than domain Specifics (4.4%). Establish universal principles first, then add domain rules incrementally.' },
+  c09_4t: { ko: "에이전트의 맹점은 '영향 범위 추론'", en: 'Agent Blind Spot: Impact Radius' },
+  c09_4p: { ko: "위반의 46%가 '다른 파일/문서/규칙과의 정합성 누락'에서 발생. 에이전트는 현재 파일에 집중하면서 파급 효과를 과소평가한다.", en: "46% of violations stem from 'consistency gaps across files/docs/rules'. Agents focus on the current file and underestimate ripple effects." },
+};
+
+let currentLang = 'ko';
+
+const articleUrls = {
+  ko: 'https://medium.com/@ibare/%EC%8B%9C%EB%8B%88%EC%96%B4-%EA%B0%9C%EB%B0%9C%EC%9E%90%EA%B0%80-ai%EC%99%80-6%EA%B0%9C%EC%9B%94%EA%B0%84-25%EB%A7%8C-%EB%9D%BC%EC%9D%B8%EC%9D%98-%EC%8B%9C%EC%8A%A4%ED%85%9C%EC%9D%84-%EB%A7%8C%EB%93%A4%EB%A9%B0-%EB%B0%9C%EA%B2%AC%ED%95%9C-%EA%B2%83%EB%93%A4-e3935857f35c',
+  en: 'https://medium.com/@ibare/what-i-learned-building-a-250k-line-system-with-ai-over-six-months-92b785f7374e'
+};
+
+function applyLang(lang) {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (I[key] && I[key][lang]) el.innerHTML = I[key][lang];
+  });
+  const link = document.getElementById('articleLink');
+  if (link) link.href = articleUrls[lang] || articleUrls.ko;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.ctrl-btn[data-lang]').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  applyLang(lang);
+}
+
+// ═══ Theme ═══
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelectorAll('.ctrl-btn[data-theme-btn]').forEach(b => b.classList.toggle('active', b.dataset.themeBtn === theme));
+}
+
+// ═══ Sticky Legend ═══
+const legend = document.getElementById('stickyLegend');
+const hero = document.querySelector('.hero');
+new IntersectionObserver(([e]) => legend.classList.toggle('visible', !e.isIntersecting), { threshold: 0.1 }).observe(hero);
+
+// ═══ Tooltip ═══
+const tooltip = document.getElementById('tooltip');
+let ttT;
+function showTT(e, html) { clearTimeout(ttT); tooltip.innerHTML = html; tooltip.classList.add('show'); posTT(e); }
+function posTT(e) { const p=12; let x=e.clientX+p, y=e.clientY+p; const r=tooltip.getBoundingClientRect(); if(x+r.width>innerWidth-p)x=e.clientX-r.width-p; if(y+r.height>innerHeight-p)y=e.clientY-r.height-p; tooltip.style.left=x+'px'; tooltip.style.top=y+'px'; }
+function hideTT() { ttT=setTimeout(()=>tooltip.classList.remove('show'),80); }
+
+document.querySelectorAll('.bar-row[data-tt-title]').forEach(r => { r.style.cursor='pointer'; r.addEventListener('mouseenter',e=>showTT(e,`<div class="tt-title">${r.dataset.ttTitle}</div><div style="color:var(--text-dim);font-size:12px">${r.dataset.ttDetail}</div>`)); r.addEventListener('mousemove',posTT); r.addEventListener('mouseleave',hideTT); });
+
+document.querySelectorAll('.stacked-seg').forEach(s => {
+  s.addEventListener('mouseenter', e => { const ck = currentLang==='en'?'ttCatEn':'ttCatKo'; const cat=s.dataset[ck]; const proj=s.closest('.stacked-row').querySelector('.stacked-label').textContent.trim(); showTT(e,`<div class="tt-title">${proj}</div><div class="tt-row"><span class="tt-label">${cat}</span><span class="tt-val">${s.dataset.ttPct}</span></div><div class="tt-row"><span class="tt-label">${currentLang==='ko'?'이벤트':'Events'}</span><span class="tt-val">${s.dataset.ttCnt}</span></div>`); });
+  s.addEventListener('mousemove',posTT); s.addEventListener('mouseleave',hideTT);
+});
+
+document.querySelectorAll('.scatter-dot[data-tt-title]').forEach(d => { d.addEventListener('mouseenter',e=>{let h=`<div class="tt-title">${d.dataset.ttTitle}</div>`; d.dataset.ttDetail.split(' · ').forEach(p=>h+=`<div style="color:var(--text-dim);font-size:11px;padding:1px 0">${p}</div>`); showTT(e,h);}); d.addEventListener('mousemove',posTT); d.addEventListener('mouseleave',hideTT); });
+
+const donutSegs=document.querySelectorAll('.donut-seg'), donutLI=document.querySelectorAll('#donutLegend .donut-legend-item');
+const DD=[{ko:'파일 크기/구조',en:'File size/structure',c:39,p:'26%'},{ko:'import/경로 정합성',en:'Import/path consistency',c:30,p:'20%'},{ko:'타입 안전성',en:'Type safety',c:25,p:'17%'},{ko:'순서/시퀀스',en:'Order/sequence',c:14,p:'9%'},{ko:'동기화 누락',en:'Sync missing',c:11,p:'7%'},{ko:'기타',en:'Others',c:30,p:'20%'}];
+function hlDonut(i){donutSegs.forEach((s,j)=>{s.style.opacity=j===i?'1':'0.25';s.style.transition='opacity 0.2s';})} function rstDonut(){donutSegs.forEach(s=>s.style.opacity='1')}
+donutSegs.forEach(s=>{s.style.cursor='pointer';s.addEventListener('mouseenter',e=>{const i=+s.dataset.idx,d=DD[i];hlDonut(i);showTT(e,`<div class="tt-title">${d[currentLang]}</div><div class="tt-row"><span class="tt-label">${currentLang==='ko'?'건수':'Count'}</span><span class="tt-val">${d.c}</span></div><div class="tt-row"><span class="tt-label">${currentLang==='ko'?'비율':'Share'}</span><span class="tt-val">${d.p}</span></div>`);});s.addEventListener('mousemove',posTT);s.addEventListener('mouseleave',()=>{rstDonut();hideTT()})});
+donutLI.forEach(l=>{l.addEventListener('mouseenter',()=>hlDonut(+l.dataset.idx));l.addEventListener('mouseleave',rstDonut)});
+
+// ═══ Scroll animation ═══
+new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('animate')}),{threshold:0.1}).observe(document.querySelector('.section'));
+document.querySelectorAll('.section').forEach(el=>new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('animate')}),{threshold:0.1}).observe(el));
+
+// ═══ Init: apply default language on load ═══
+applyLang('ko');
+
+// ═══ Scroll depth tracking (Umami custom events) ═══
+(function() {
+  const sections = [
+    { el: document.querySelector('.hero'), name: 'hero' },
+    ...document.querySelectorAll('.section').entries()
+  ];
+  const tracked = new Set();
+  const sectionEls = document.querySelectorAll('.section');
+  const targets = [
+    { el: document.querySelector('.hero'), name: 'view_hero' },
+    ...Array.from(sectionEls).map(el => {
+      const num = el.querySelector('.section-number');
+      return { el, name: 'view_section_' + (num ? num.textContent.trim() : 'unknown') };
+    }),
+    { el: document.querySelector('.footer'), name: 'view_footer' }
+  ];
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const t = targets.find(t => t.el === entry.target);
+      if (t && !tracked.has(t.name)) {
+        tracked.add(t.name);
+        if (typeof umami !== 'undefined') umami.track(t.name);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  targets.forEach(t => { if (t.el) observer.observe(t.el); });
+})();
+</script>
+</body>
+</html>
